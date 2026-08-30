@@ -4,79 +4,178 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>English Coach Agent — micro1 Hackathon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Special+Elite&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e; color: #eee;
-      max-width: 800px; margin: 0 auto; padding: 20px; min-height: 100vh;
+
+    :root {
+      --paper: #f2e8d5;
+      --paper-dark: #e9dcc3;
+      --paper-card: #faf3e3;
+      --ink: #2c2418;
+      --ink-soft: #4a3f2e;
+      --ink-faint: #8a7a5e;
+      --red: #a63d40;
+      --green: #4a7a5b;
+      --gold: #b8860b;
+      --purple: #7a5a8a;
+      --blue: #4a6a8a;
     }
-    header { text-align:center; padding:30px 0; border-bottom:2px solid #e94560; margin-bottom:30px; }
-    header h1 { color:#e94560; font-size:2rem; }
-    header p { color:#aaa; margin-top:8px; }
 
-    .card { background:#16213e; border-radius:16px; padding:24px; margin-bottom:20px; border:1px solid #0f3460; }
-    .card h2 { color:#e94560; margin-bottom:16px; font-size:1.2rem; }
+    body {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.15rem;
+      line-height: 1.55;
+      color: var(--ink);
+      max-width: 820px; margin: 0 auto; padding: 24px; min-height: 100vh;
+      background-color: var(--paper);
+      /* subtle aged-paper texture: stains + grain, generated locally */
+      background-image:
+        radial-gradient(ellipse 300px 200px at 15% 20%, rgba(160,120,60,0.06), transparent),
+        radial-gradient(ellipse 250px 180px at 85% 75%, rgba(160,120,60,0.07), transparent),
+        radial-gradient(ellipse 200px 150px at 60% 10%, rgba(140,100,50,0.05), transparent),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    }
 
-    .sentence-display { background:#0f3460; border-radius:12px; padding:20px; font-size:1.3rem;
-      text-align:center; margin:16px 0; font-weight:600; line-height:1.6; }
-    .sentence-display small { display:block; font-size:0.85rem; color:#888; margin-top:8px; font-weight:400; }
+    h1, h2, h3, .tab, .btn, .score-text, .verdict {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      letter-spacing: 0.04em;
+    }
 
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 28px;
-      border-radius:12px; border:none; font-size:1rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
-    .btn:hover { transform:translateY(-2px); }
-    .btn-primary { background:#e94560; color:white; }
-    .btn-secondary { background:#0f3460; color:#eee; }
-    .btn-success { background:#4ecca3; color:#1a1a2e; }
-    .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-    .btn-row { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
-    .btn-row .btn { flex:1; min-width:140px; }
+    code, .agent-log, .memory-item, .sentence-display, .sim-input {
+      font-family: 'Special Elite', 'Courier New', monospace;
+    }
 
-    .agent-log { background:#0a0a1a; border-radius:12px; padding:16px; font-family:'Courier New',monospace;
-      font-size:0.85rem; max-height:400px; overflow-y:auto; margin-top:16px; }
-    .log-entry { padding:8px 12px; margin-bottom:8px; border-radius:8px; border-left:3px solid; }
-    .log-transcribe { border-color:#4ecca3; background:rgba(78,204,163,0.1); }
-    .log-analyze { border-color:#e94560; background:rgba(233,69,96,0.1); }
-    .log-recall { border-color:#f9a826; background:rgba(249,168,38,0.1); }
-    .log-generate { border-color:#9b59b6; background:rgba(155,89,182,0.1); }
-    .log-verify { border-color:#3498db; background:rgba(52,152,219,0.1); }
-    .log-system { border-color:#666; background:rgba(102,102,102,0.1); }
-    .log-time { color:#666; font-size:0.75rem; margin-left:8px; }
+    header {
+      text-align: center; padding: 36px 0 28px; margin-bottom: 28px;
+      border-bottom: 3px double var(--ink-soft);
+    }
+    header h1 { font-size: 3rem; color: var(--ink); letter-spacing: 0.06em; }
+    header h1::after {
+      content: ''; display: block; width: 120px; height: 2px;
+      background: var(--red); margin: 10px auto 0;
+    }
+    header p { color: var(--ink-faint); margin-top: 10px; font-style: italic; font-size: 1.05rem; }
 
-    .result-box { background:#0f3460; border-radius:12px; padding:16px; margin-top:16px; }
-    .result-box h3 { color:#4ecca3; margin-bottom:12px; }
+    /* Cards = paper scraps taped to the page */
+    .card {
+      background: var(--paper-card);
+      border: 1px solid #d8c9a8;
+      border-radius: 2px;
+      padding: 26px;
+      margin-bottom: 26px;
+      box-shadow: 2px 3px 0 rgba(90,70,40,0.15), 0 8px 20px rgba(90,70,40,0.08);
+      position: relative;
+      transform: rotate(-0.3deg);
+    }
+    .card:nth-of-type(even) { transform: rotate(0.4deg); }
+    /* washi tape strip on top */
+    .card::before {
+      content: ''; position: absolute; top: -10px; left: 50%; transform: translateX(-50%) rotate(-1.5deg);
+      width: 90px; height: 22px;
+      background: rgba(166, 61, 64, 0.35);
+      border-left: 1px dashed rgba(255,255,255,0.5);
+      border-right: 1px dashed rgba(255,255,255,0.5);
+    }
+    .card h2 { font-size: 1.5rem; color: var(--red); margin-bottom: 14px; }
 
-    .score-bar { display:flex; align-items:center; gap:12px; margin:12px 0; }
-    .score-track { flex:1; height:10px; background:#1a1a2e; border-radius:5px; overflow:hidden; }
-    .score-fill { height:100%; background:linear-gradient(90deg,#e94560,#4ecca3); border-radius:5px; transition:width 0.5s ease; }
-    .score-text { font-weight:700; min-width:50px; text-align:right; }
+    .sentence-display {
+      background: var(--paper-dark);
+      border: 1px dashed var(--ink-faint);
+      border-radius: 2px;
+      padding: 22px; font-size: 1.15rem;
+      text-align: center; margin: 16px 0; line-height: 1.7;
+      box-shadow: inset 0 1px 4px rgba(90,70,40,0.1);
+    }
+    .sentence-display small {
+      display: block; font-family: 'Cormorant Garamond', serif; font-style: italic;
+      font-size: 0.95rem; color: var(--ink-faint); margin-top: 10px;
+    }
 
-    .comparison-table { width:100%; border-collapse:collapse; margin-top:16px; font-size:0.9rem; }
-    .comparison-table th, .comparison-table td { padding:12px; text-align:left; border-bottom:1px solid #0f3460; }
-    .comparison-table th { color:#e94560; }
-    .comparison-table tr:hover { background:rgba(233,69,96,0.05); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 26px; border-radius: 2px; border: 2px solid var(--ink);
+      background: var(--paper-card); color: var(--ink);
+      font-size: 1.05rem; letter-spacing: 0.08em;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 3px 3px 0 rgba(44,36,24,0.8);
+    }
+    .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(44,36,24,0.8); }
+    .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 rgba(44,36,24,0.8); }
+    .btn-primary { background: var(--red); color: var(--paper-card); border-color: #7a2a2c; }
+    .btn-secondary { background: var(--ink); color: var(--paper-card); }
+    .btn-success { background: var(--green); color: var(--paper-card); border-color: #3a5f48; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+    .btn-row .btn { flex: 1; min-width: 140px; }
 
-    .hidden { display:none !important; }
-    .rec { color:#e94560; animation:pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    /* Agent log = typewriter paper roll */
+    .agent-log {
+      background: #efe6cf; border: 1px solid #d8c9a8; border-radius: 2px;
+      padding: 18px; font-size: 0.85rem; max-height: 400px; overflow-y: auto; margin-top: 16px;
+      box-shadow: inset 0 2px 8px rgba(90,70,40,0.12);
+    }
+    .log-entry { padding: 8px 12px; margin-bottom: 8px; border-radius: 1px; border-left: 3px solid; }
+    .log-transcribe { border-color: var(--green); background: rgba(74,122,91,0.08); }
+    .log-analyze { border-color: var(--red); background: rgba(166,61,64,0.08); }
+    .log-recall { border-color: var(--gold); background: rgba(184,134,11,0.08); }
+    .log-generate { border-color: var(--purple); background: rgba(122,90,138,0.08); }
+    .log-verify { border-color: var(--blue); background: rgba(74,106,138,0.08); }
+    .log-system { border-color: var(--ink-faint); background: rgba(138,122,94,0.08); }
+    .log-time { color: var(--ink-faint); font-size: 0.75rem; margin-left: 8px; }
 
-    .memory-panel { background:rgba(249,168,38,0.1); border:1px solid #f9a826; border-radius:12px; padding:16px; margin-top:16px; }
-    .memory-panel h3 { color:#f9a826; margin-bottom:12px; }
-    .memory-item { display:inline-block; background:#0f3460; padding:6px 12px; border-radius:20px; margin:4px; font-size:0.85rem; }
+    .result-box {
+      background: var(--paper-dark); border: 1px solid #d8c9a8;
+      border-radius: 2px; padding: 18px; margin-top: 16px;
+    }
+    .result-box h3 { color: var(--green); margin-bottom: 12px; }
 
-    .tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-    .tab { padding:10px 20px; background:#16213e; border:1px solid #0f3460; border-radius:10px;
-      cursor:pointer; font-weight:600; color:#888; }
-    .tab.active { background:#e94560; color:white; border-color:#e94560; }
+    .score-bar { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; }
+    .score-track { flex: 1; height: 12px; background: #e0d3b5; border: 1px solid #c9b98f; border-radius: 2px; overflow: hidden; }
+    .score-fill { height: 100%; background: repeating-linear-gradient(45deg, var(--red), var(--red) 8px, #8f3235 8px, #8f3235 16px); transition: width 0.5s ease; }
+    .score-text { font-size: 1.4rem; min-width: 60px; text-align: right; color: var(--ink); }
 
-    .section { display:none; }
-    .section.active { display:block; }
+    .comparison-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 1rem; }
+    .comparison-table th, .comparison-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #d8c9a8; }
+    .comparison-table th { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; color: var(--red); font-size: 1.05rem; }
+    .comparison-table tr:hover { background: rgba(166,61,64,0.05); }
 
-    .sim-input { width:100%; padding:14px; background:#0a0a1a; border:1px solid #0f3460; border-radius:10px;
-      color:#eee; font-size:1rem; margin-top:8px; }
-    .sim-label { color:#f9a826; font-size:0.85rem; margin-top:16px; display:block; }
-    details.sim-box { margin-top:16px; }
-    details.sim-box summary { cursor:pointer; color:#f9a826; font-size:0.9rem; }
+    .hidden { display: none !important; }
+    .rec { color: #ffd9d9; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .memory-panel { background: rgba(184,134,11,0.07); border: 1px dashed var(--gold); border-radius: 2px; padding: 18px; margin-top: 16px; }
+    .memory-panel h3 { color: var(--gold); margin-bottom: 12px; font-size: 1.15rem; }
+    .memory-item {
+      display: inline-block; background: var(--paper-dark); border: 1px solid #c9b98f;
+      padding: 5px 12px; border-radius: 2px; margin: 4px; font-size: 0.85rem;
+      box-shadow: 1px 2px 0 rgba(90,70,40,0.12);
+    }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 26px; flex-wrap: wrap; }
+    .tab {
+      padding: 10px 20px; background: var(--paper-card); border: 2px solid var(--ink);
+      border-radius: 2px; cursor: pointer; color: var(--ink-soft); font-size: 1.05rem;
+      box-shadow: 2px 2px 0 rgba(44,36,24,0.6); transition: all 0.15s;
+    }
+    .tab:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 rgba(44,36,24,0.6); }
+    .tab.active { background: var(--ink); color: var(--paper-card); }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .sim-input {
+      width: 100%; padding: 14px; background: #efe6cf; border: 1px dashed var(--ink-faint);
+      border-radius: 2px; color: var(--ink); font-size: 1rem; margin-top: 8px;
+    }
+    .sim-input::placeholder { color: var(--ink-faint); }
+    .sim-label { color: var(--gold); font-size: 0.95rem; margin-top: 14px; display: block; font-style: italic; }
+    details.sim-box { margin-top: 18px; }
+    details.sim-box summary { cursor: pointer; color: var(--gold); font-size: 0.95rem; font-style: italic; }
+
+    .verdict { font-size: 1.5rem; letter-spacing: 0.05em; border-radius: 2px; padding: 16px; margin-bottom: 14px; text-align: center; }
   </style>
 </head>
 <body>
@@ -87,40 +186,40 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" data-sec="practice">🎯 Practice</div>
-  <div class="tab" data-sec="workflow">⚙️ Agent Workflow</div>
-  <div class="tab" data-sec="evaluation">📊 Evaluation</div>
-  <div class="tab" data-sec="changelog">📝 Changelog</div>
+  <div class="tab active" data-sec="practice">Practice</div>
+  <div class="tab" data-sec="workflow">Agent Workflow</div>
+  <div class="tab" data-sec="evaluation">Evaluation</div>
+  <div class="tab" data-sec="changelog">Changelog</div>
 </div>
 
 <!-- ==================== PRACTICE ==================== -->
 <div id="section-practice" class="section active">
   <div class="card">
-    <h2>🎯 Practice Session</h2>
+    <h2>Practice Session</h2>
     <div class="sentence-display" id="sentence-display">
       Loading...
-      <small>Click 🔊 to hear, then record yourself</small>
+      <small>Click LISTEN to hear, then record yourself</small>
     </div>
     <div class="btn-row">
-      <button class="btn btn-secondary" id="btn-listen">🔊 Listen</button>
-      <button class="btn btn-primary" id="btn-record">🎤 Record</button>
+      <button class="btn btn-secondary" id="btn-listen">▶ Listen</button>
+      <button class="btn btn-primary" id="btn-record">● Record</button>
       <button class="btn btn-success" id="btn-next">Next →</button>
     </div>
 
     <!-- Demo-safe fallback: type what you said if speech recognition is unavailable -->
     <details class="sim-box">
-      <summary>⌨️ Demo fallback: type what you said (if mic/speech fails)</summary>
+      <summary>✎ Demo fallback: type what you said (if mic/speech fails)</summary>
       <span class="sim-label">Type exactly what you said (simulate your pronunciation):</span>
       <input class="sim-input" id="sim-input" placeholder='e.g. "I sink this is good"'>
       <div class="btn-row">
-        <button class="btn btn-secondary" id="btn-sim">▶️ Run agent on typed text</button>
+        <button class="btn btn-secondary" id="btn-sim">▶ Run agent on typed text</button>
       </div>
     </details>
   </div>
 
   <div class="card hidden" id="result-card">
-    <h2>📊 Result</h2>
-    <div id="verdict-banner" style="border-radius:12px; padding:16px; margin-bottom:14px; text-align:center; font-size:1.15rem; font-weight:700;"></div>
+    <h2>Result</h2>
+    <div id="verdict-banner" class="verdict"></div>
     <div class="result-box" id="transcript-result"></div>
     <div class="score-bar">
       <span>Accuracy:</span>
@@ -130,7 +229,7 @@
   </div>
 
   <div class="card">
-    <h2>🧠 Agent Memory</h2>
+    <h2>Agent Memory</h2>
     <div class="memory-panel">
       <h3>Your persistent error patterns:</h3>
       <div id="memory-list">
@@ -140,7 +239,7 @@
   </div>
 
   <div class="card">
-    <h2>💬 Agent Feedback</h2>
+    <h2>Agent Feedback</h2>
     <div class="result-box" id="agent-feedback">Record yourself to get personalized feedback from the agent.</div>
   </div>
 </div>
@@ -148,8 +247,8 @@
 <!-- ==================== WORKFLOW ==================== -->
 <div id="section-workflow" class="section">
   <div class="card">
-    <h2>⚙️ Single-Agent Pipeline</h2>
-    <p style="color:#aaa; margin-bottom:16px;">
+    <h2>Single-Agent Pipeline</h2>
+    <p style="color:var(--ink-faint); margin-bottom:16px; font-style:italic;">
       One agent runs five skills in sequence: <code>transcribe → analyze → recall → generate → verify</code>.
       The log below shows real execution.
     </p>
@@ -162,24 +261,24 @@
 <!-- ==================== EVALUATION ==================== -->
 <div id="section-evaluation" class="section">
   <div class="card">
-    <h2>📊 Baseline vs Agent Solution</h2>
-    <p style="color:#aaa; margin-bottom:16px;">Comparison of simple prompt baseline vs memory-augmented agent on the same 3 test sentences.</p>
+    <h2>Baseline vs Agent Solution</h2>
+    <p style="color:var(--ink-faint); margin-bottom:16px; font-style:italic;">Comparison of simple prompt baseline vs memory-augmented agent on the same 3 test sentences.</p>
     <table class="comparison-table">
       <thead>
         <tr><th>Metric</th><th>Baseline (single prompt)</th><th>Agent (with memory)</th><th>Improvement</th></tr>
       </thead>
       <tbody>
-        <tr><td>Avg. accuracy score</td><td>72%</td><td>89%</td><td style="color:#4ecca3">+17%</td></tr>
-        <tr><td>Feedback specificity</td><td>Generic ("practice more")</td><td>Targeted ("work on /θ/ in 'think'")</td><td style="color:#4ecca3">Qualitative</td></tr>
-        <tr><td>Exercise relevance</td><td>Random sentences</td><td>Personalized to error history</td><td style="color:#4ecca3">Adaptive</td></tr>
-        <tr><td>Memory across sessions</td><td>None</td><td>Persistent error patterns</td><td style="color:#4ecca3">Stateful</td></tr>
-        <tr><td>Human time per session</td><td>~2 min (manual correction)</td><td>~30 sec (auto-analysis)</td><td style="color:#4ecca3">-75%</td></tr>
+        <tr><td>Avg. accuracy score</td><td>72%</td><td>89%</td><td style="color:#4a7a5b">+17%</td></tr>
+        <tr><td>Feedback specificity</td><td>Generic ("practice more")</td><td>Targeted ("work on /θ/ in 'think'")</td><td style="color:#4a7a5b">Qualitative</td></tr>
+        <tr><td>Exercise relevance</td><td>Random sentences</td><td>Personalized to error history</td><td style="color:#4a7a5b">Adaptive</td></tr>
+        <tr><td>Memory across sessions</td><td>None</td><td>Persistent error patterns</td><td style="color:#4a7a5b">Stateful</td></tr>
+        <tr><td>Human time per session</td><td>~2 min (manual correction)</td><td>~30 sec (auto-analysis)</td><td style="color:#4a7a5b">-75%</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="card">
-    <h2>🧪 Test Cases</h2>
+    <h2>Test Cases</h2>
     <div class="result-box">
       <strong>Case 1 (Easy):</strong> "I need to finish this project by Friday."<br>
       <small>Baseline: 85% | Agent: 92% | Delta: +7%</small>
@@ -198,7 +297,7 @@
 <!-- ==================== CHANGELOG ==================== -->
 <div id="section-changelog" class="section">
   <div class="card">
-    <h2>📝 Improvement Changelog</h2>
+    <h2>Improvement Changelog</h2>
     <table class="comparison-table">
       <thead>
         <tr><th>Stage</th><th>What I tried</th><th>Evidence</th><th>Decision / Learning</th></tr>
@@ -312,14 +411,14 @@ if (SR) {
   recognition.onend = () => {
     isRecording = false;
     clearTimeout(timeoutId);
-    $('btn-record').innerHTML = '🎤 Record';
+    $('btn-record').innerHTML = '● Record';
     const text = finalTranscript.trim();
     if (text) {
       log('TRANSCRIBE', `Transcription: "${text}"`);
       runAgent(text);
     } else if (!gotResult) {
       log('SYSTEM', 'No speech detected. Try again or use the typed fallback below.');
-      $('transcript-result').innerHTML = '<p style="color:#f9a826">No speech detected. Click 🎤 and speak right away — or use the typed fallback below.</p>';
+      $('transcript-result').innerHTML = '<p style="color:var(--gold)"><em>No speech detected. Click ● RECORD and speak right away — or use the typed fallback below.</em></p>';
       $('result-card').classList.remove('hidden');
     }
   };
@@ -327,9 +426,9 @@ if (SR) {
   recognition.onerror = (event) => {
     isRecording = false;
     clearTimeout(timeoutId);
-    $('btn-record').innerHTML = '🎤 Record';
+    $('btn-record').innerHTML = '● Record';
     log('SYSTEM', `Speech recognition error: ${event.error}. Use the typed fallback below.`);
-    $('transcript-result').innerHTML = `<p style="color:#f9a826">Mic/speech error (${event.error}). Use the typed fallback below to run the demo.</p>`;
+    $('transcript-result').innerHTML = `<p style="color:var(--gold)"><em>Mic/speech error (${event.error}). Use the typed fallback below to run the demo.</em></p>`;
     $('result-card').classList.remove('hidden');
   };
 }
@@ -353,7 +452,7 @@ async function toggleRecording() {
   finalTranscript = ''; gotResult = false;
   delete $('transcript-result').dataset.done; // new recording = unlock preview
   isRecording = true;
-  $('btn-record').innerHTML = '<span class="rec">⏹️</span> Stop';
+  $('btn-record').innerHTML = '<span class="rec">■</span> Stop';
   $('result-card').classList.remove('hidden');
   $('transcript-result').innerHTML = '<p><em>Listening… speak the sentence now.</em></p>';
   log('TRANSCRIBE', 'Listening…');
@@ -478,14 +577,14 @@ function showResult(transcript, target, analysis, exercise, verified) {
   const banner = $('verdict-banner');
   const wrongWords = analysis.errors.map(e => `"${e.target}"`).join(', ');
   if (analysis.score >= 85) {
-    banner.style.background = '#4ecca322'; banner.style.color = '#4ecca3';
-    banner.textContent = `🎉 Great job! ${analysis.score}% — almost perfect.`;
+    banner.style.background = 'rgba(74,122,91,0.15)'; banner.style.color = '#4a7a5b'; banner.style.border = '2px solid #4a7a5b';
+    banner.textContent = `★ Great job! ${analysis.score}% — almost perfect.`;
   } else if (analysis.score >= 60) {
-    banner.style.background = '#f9a82622'; banner.style.color = '#f9a826';
-    banner.textContent = `💪 Good! ${analysis.score}% — work on: ${wrongWords}`;
+    banner.style.background = 'rgba(184,134,11,0.12)'; banner.style.color = '#9a6f09'; banner.style.border = '2px solid #b8860b';
+    banner.textContent = `◆ Good! ${analysis.score}% — work on: ${wrongWords}`;
   } else {
-    banner.style.background = '#e9456022'; banner.style.color = '#e94560';
-    banner.textContent = `🔁 Keep practicing! ${analysis.score}% — focus on: ${wrongWords}`;
+    banner.style.background = 'rgba(166,61,64,0.12)'; banner.style.color = '#a63d40'; banner.style.border = '2px solid #a63d40';
+    banner.textContent = `↺ Keep practicing! ${analysis.score}% — focus on: ${wrongWords}`;
   }
 
   let html = `<p><strong>You said:</strong> "${transcript}"</p><p><strong>Target:</strong> "${target}"</p>`;
@@ -494,17 +593,17 @@ function showResult(transcript, target, analysis, exercise, verified) {
   analysis.targetWords.forEach((w, i) => {
     const said = analysis.saidWords[i] || '';
     const isError = said !== w;
-    const color = isError ? '#e94560' : '#4ecca3';
+    const color = isError ? '#a63d40' : '#4a7a5b';
     const icon = isError ? '✗' : '✓';
-    html += `<span style="background:${color}22; color:${color}; padding:4px 10px; border-radius:8px; font-size:0.9rem;">${icon} ${w}</span>`;
+    html += `<span style="background:${color}18; color:${color}; border:1px solid ${color}55; padding:4px 10px; border-radius:2px; font-family:'Special Elite',monospace; font-size:0.85rem;">${icon} ${w}</span>`;
   });
   html += '</div>';
   $('transcript-result').innerHTML = html;
 
-  let feedback = `<p><strong>🎯 Next exercise (${exercise.focus}):</strong></p>`;
-  feedback += `<p style="font-size:1.1rem; margin:12px 0; padding:12px; background:#0f3460; border-radius:8px;">"${exercise.phrase}"</p>`;
+  let feedback = `<p><strong>→ Next exercise (${exercise.focus}):</strong></p>`;
+  feedback += `<p style="font-size:1.1rem; margin:12px 0; padding:14px; background:var(--paper-dark); border:1px dashed var(--ink-faint); border-radius:2px; font-family:'Special Elite',monospace;">"${exercise.phrase}"</p>`;
   if (exercise.patterns.length) feedback += `<p><strong>Why:</strong> You keep confusing <code>${exercise.patterns[0]}</code>. This exercise targets that pattern.</p>`;
-  if (!verified) feedback += `<p style="color:#f9a826;"><em>Note: new pattern — practice more to confirm it's a real issue.</em></p>`;
+  if (!verified) feedback += `<p style="color:var(--gold);"><em>Note: new pattern — practice more to confirm it's a real issue.</em></p>`;
   $('agent-feedback').innerHTML = feedback;
 
   updateMemoryDisplay();
