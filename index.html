@@ -120,6 +120,7 @@
 
   <div class="card hidden" id="result-card">
     <h2>📊 Result</h2>
+    <div id="verdict-banner" style="border-radius:12px; padding:16px; margin-bottom:14px; text-align:center; font-size:1.15rem; font-weight:700;"></div>
     <div class="result-box" id="transcript-result"></div>
     <div class="score-bar">
       <span>Accuracy:</span>
@@ -215,12 +216,18 @@
 <script>
 // ==================== DATA ====================
 const SENTENCES = [
-  { en: "I need to finish this project by Friday.", pt: "Preciso terminar este projeto até sexta.", difficulty: "easy" },
-  { en: "The weather is really nice today, isn't it?", pt: "O tempo está muito bom hoje, né?", difficulty: "medium" },
-  { en: "I've been learning English for three months.", pt: "Estou aprendendo inglês há três meses.", difficulty: "hard" },
-  { en: "Could you help me with this task, please?", pt: "Você poderia me ajudar com esta tarefa?", difficulty: "medium" },
-  { en: "What do you usually do on weekends?", pt: "O que você costuma fazer nos fins de semana?", difficulty: "easy" },
-  { en: "She has been working here since January.", pt: "Ela trabalha aqui desde janeiro.", difficulty: "hard" }
+  { en: "I usually wake up at seven, drink a cup of coffee, and check my messages before I start working.",
+    pt: "Costumo acordar às sete, tomar um café e olhar as mensagens antes de começar a trabalhar.", difficulty: "easy" },
+  { en: "I think this path is thicker than the other one, but both of them take us to the same place.",
+    pt: "Acho que esse caminho é mais denso que o outro, mas os dois levam ao mesmo lugar.", difficulty: "medium" },
+  { en: "I've been learning English for three months, and although it's hard sometimes, I feel I'm improving every single week.",
+    pt: "Estudo inglês há três meses e, embora seja difícil às vezes, sinto que melhoro a cada semana.", difficulty: "hard" },
+  { en: "Could you help me carry these bags to the third floor? They're heavier than I expected and I'd really appreciate it.",
+    pt: "Pode me ajudar a levar essas sacolas até o terceiro andar? Estão mais pesadas do que eu esperava.", difficulty: "medium" },
+  { en: "On weekends we usually visit my mother's house, have lunch together, and then take the dog for a long walk in the park.",
+    pt: "Nos fins de semana visitamos a casa da minha mãe, almoçamos juntos e depois levamos o cachorro pra passear no parque.", difficulty: "easy" },
+  { en: "She has been working here since January, and in just a few months she has learned things that took other people years to understand.",
+    pt: "Ela trabalha aqui desde janeiro e, em poucos meses, aprendeu coisas que levaram anos pra outras pessoas entenderem.", difficulty: "hard" }
 ];
 
 // ==================== STATE ====================
@@ -260,6 +267,7 @@ function loadSentence() {
   $('sentence-display').innerHTML = `${s.en}<small>${s.pt} • Difficulty: ${s.difficulty}</small>`;
   $('result-card').classList.add('hidden');
   $('transcript-result').innerHTML = '';
+  delete $('transcript-result').dataset.done; // unlock live preview for the new round
   $('score-fill').style.width = '0%';
   $('score-text').textContent = '0%';
 }
@@ -294,8 +302,11 @@ if (SR) {
       if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
       else interim += event.results[i][0].transcript;
     }
-    // Live preview while speaking
-    if (interim) $('transcript-result').innerHTML = `<p><em>Hearing: "${interim}"</em></p>`;
+    // Live preview while speaking (never overwrite a finished result)
+    if (interim) {
+      const el = $('transcript-result');
+      if (!el.dataset.done) el.innerHTML = `<p><em>Hearing: "${interim}"</em></p>`;
+    }
   };
 
   recognition.onend = () => {
@@ -340,6 +351,7 @@ async function toggleRecording() {
     return;
   }
   finalTranscript = ''; gotResult = false;
+  delete $('transcript-result').dataset.done; // new recording = unlock preview
   isRecording = true;
   $('btn-record').innerHTML = '<span class="rec">⏹️</span> Stop';
   $('result-card').classList.remove('hidden');
@@ -460,6 +472,21 @@ function showResult(transcript, target, analysis, exercise, verified) {
   $('result-card').classList.remove('hidden');
   $('score-fill').style.width = analysis.score + '%';
   $('score-text').textContent = analysis.score + '%';
+  $('transcript-result').dataset.done = '1'; // lock: don't let live preview overwrite this
+
+  // Big verdict banner — impossible to miss
+  const banner = $('verdict-banner');
+  const wrongWords = analysis.errors.map(e => `"${e.target}"`).join(', ');
+  if (analysis.score >= 85) {
+    banner.style.background = '#4ecca322'; banner.style.color = '#4ecca3';
+    banner.textContent = `🎉 Great job! ${analysis.score}% — almost perfect.`;
+  } else if (analysis.score >= 60) {
+    banner.style.background = '#f9a82622'; banner.style.color = '#f9a826';
+    banner.textContent = `💪 Good! ${analysis.score}% — work on: ${wrongWords}`;
+  } else {
+    banner.style.background = '#e9456022'; banner.style.color = '#e94560';
+    banner.textContent = `🔁 Keep practicing! ${analysis.score}% — focus on: ${wrongWords}`;
+  }
 
   let html = `<p><strong>You said:</strong> "${transcript}"</p><p><strong>Target:</strong> "${target}"</p>`;
   html += '<p style="margin-top:12px;"><strong>Word analysis:</strong></p>';
@@ -481,6 +508,9 @@ function showResult(transcript, target, analysis, exercise, verified) {
   $('agent-feedback').innerHTML = feedback;
 
   updateMemoryDisplay();
+
+  // Bring the result into view — this is the feedback the user is waiting for
+  $('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function updateMemoryDisplay() {
