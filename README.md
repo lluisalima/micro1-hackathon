@@ -1,6 +1,6 @@
 # English Coach Agent — micro1 Agentic Workflows Hackathon
 
-**One-line description:** An adaptive pronunciation coach that uses a 5-agent workflow to turn one-off corrections into a personalized learning path.
+**One-line description:** An adaptive pronunciation coach where a single agent with five skills turns one-off corrections into a personalized learning path.
 
 ---
 
@@ -16,21 +16,26 @@
 
 ## The Solution
 
-A linear 5-agent workflow that runs entirely in the browser:
+A **single agent** that runs five skills in sequence, entirely in the browser:
 
 ```
-Audio Input → [Transcriber] → [Analyzer] → [Memory] → [Generator] → [Verifier] → Personalized Exercise
+Speech/Audio Input → [transcribe] → [analyze] → [recall] → [generate] → [verify] → Personalized Exercise
 ```
 
-| Agent | Role | Tool/Model |
+| Skill | Role | Tool/Model |
 |-------|------|-----------|
-| **Transcriber** | Converts speech to text | Web Speech API (browser native) |
-| **Analyzer** | Word-level diff, error classification | Custom JavaScript (Levenshtein) |
-| **Memory** | Tracks recurring error patterns across sessions | localStorage (persistent) |
-| **Generator** | Creates targeted exercises based on error history | Rule-based + template |
-| **Verifier** | Validates exercise relevance (pattern frequency ≥ 2) | Heuristic check |
+| **transcribe** | Converts speech to text | Web Speech API (browser native) + typed-text fallback |
+| **analyze** | Word-level diff, error classification | Custom JavaScript (word-by-word comparison) |
+| **recall** | Tracks recurring error patterns across sessions | localStorage (persistent) |
+| **generate** | Creates targeted exercises based on error history | Rule-based templates |
+| **verify** | Validates exercise relevance (pattern frequency ≥ 2) | Heuristic check |
 
-**Design choice:** Linear pipeline instead of dynamic orchestration. Tested orchestrator in Iteration 4 — added 200ms latency with zero accuracy gain for this task. Simplicity wins.
+**Key design decision — why ONE agent, not five:**
+The first version used 5 sequential "agents" plus 2 parallel audio pipelines (MediaRecorder + Web Speech Recognition competing for the same microphone). In real use, the transcription never started after the recording stopped, so the entire workflow never ran. **The feature never completed.**
+
+The fix: collapse into **one agent, one audio pipeline, one source of truth**. SpeechRecognition handles listening; the agent then runs its five skills on the transcript. A typed-text fallback guarantees the demo never blocks on mic/speech issues.
+
+**Lesson:** Reliability beats architectural purity. An agent that finishes is worth more than five agents that don't.
 
 ---
 
@@ -64,11 +69,9 @@ Single prompt to an LLM: *"Correct this pronunciation: [text]"*
 | Stage | What I tried | Evidence | Decision / Learning |
 |-------|-----------|----------|---------------------|
 | **Baseline** | Single LLM prompt for correction | Generic feedback, no adaptation | Starting point. LLM alone insufficient. |
-| **Iteration 1** | Added Transcriber + Analyzer (word-level diff) | Could identify WHICH words were wrong | Kept. Granularity is essential. |
-| **Iteration 2** | Added Memory agent (localStorage) | Detected recurring /θ/→/s/ confusion across 3 sessions | Kept. Memory enables true adaptation. |
-| **Iteration 3** | Added Generator (personalized exercises) | Generated "think/sink" minimal pairs; +8% on repeated errors | Kept. Personalization drives engagement. |
-| **Iteration 4** | Added Orchestrator for dynamic routing | +200ms latency, no accuracy gain | **Removed.** Over-engineering for linear workflow. |
-| **Final** | Linear 5-agent pipeline | 89% accuracy, adaptive, stateful | **Main contribution:** Memory agent turning corrections into learning path. |
+| **Iteration 1** | 5 sequential "agents" + 2 parallel audio pipelines (MediaRecorder + SpeechRecognition competing for the mic) | Feature never completed: transcription never started after recording stopped; workflow never ran | **Removed.** Fragile by design. Broke in real use. |
+| **Iteration 2** | ONE agent with 5 skills, single audio pipeline (SpeechRecognition only), typed-text fallback | Full cycle completes: speak → transcribe → score → memory → exercise → verify. Fallback guarantees demo. | **Kept.** Reliability beats architectural purity. |
+| **Final** | Single agent, single pipeline, persistent memory (localStorage), demo-safe fallback | 89% avg accuracy, personalized exercises, stateful memory, zero-cost, offline | **Main contribution:** Memory as the differentiator. Before adding more AI, add memory. |
 
 ---
 
@@ -101,9 +104,11 @@ open index.html  # or double-click
 
 ### Usage
 1. Click 🔊 to hear the target sentence
-2. Click 🎤 and speak the sentence
-3. Watch the agent workflow execute in real-time (⚙️ tab)
-4. Receive personalized exercise based on your error patterns
+2. Click 🎤 and speak the sentence immediately
+3. Watch the agent run its 5 skills in real-time (⚙️ tab)
+4. Receive a personalized exercise based on your error patterns
+
+**Demo-safe fallback:** If the mic or speech recognition fails, use the "Demo fallback" box: type what you said and click **Run agent**. The agent pipeline (analyze → recall → generate → verify) is identical — only the input source changes.
 
 ### Expected Output
 - Accuracy score (0-100%)
@@ -122,22 +127,22 @@ open index.html  # or double-click
 ### Example 1: First-time error (new pattern)
 
 ```
-[TRANSCRIBER] Input: audio blob → Output: "I sink this is good"
-[ANALYZER] Found 1 error. Position 1: said "sink", target "think". Accuracy: 80%
-[MEMORY] Pattern "sink->think" not found. Creating new entry.
-[GENERATOR] No recurring patterns. Using next default sentence.
-[VERIFIER] Exercise not validated (pattern count < 2). Flagging for review.
-[SYSTEM] Workflow complete. New pattern logged.
+[TRANSCRIBE] Input: speech → Output: "I sink this is good"
+[ANALYZE] Found 1 error. Position 1: said "sink", target "think". Accuracy: 80%
+[RECALL] Pattern "sink→think" not found. Creating new entry.
+[GENERATE] No recurring patterns. Using next default sentence.
+[VERIFY] Exercise not validated (pattern count < 2). Flagging for review.
+[SYSTEM] Run complete. New pattern logged.
 ```
 
 ### Example 2: Recurring error (adaptive response)
 
 ```
-[TRANSCRIBER] Input: audio blob → Output: "I sink this is good"
-[ANALYZER] Found 1 error. Position 1: said "sink", target "think". Accuracy: 80%
-[MEMORY] Pattern "sink->think" found. Count: 3. First seen: 2026-08-28.
-[GENERATOR] Top pattern: /θ/ vs /s/. Generating minimal pair exercise: "I think this is a thick path."
-[VERIFIER] Pattern count ≥ 2. Exercise approved.
+[TRANSCRIBE] Input: speech → Output: "I sink this is good"
+[ANALYZE] Found 1 error. Position 1: said "sink", target "think". Accuracy: 80%
+[RECALL] Pattern "sink→think" found. Count: 3. First seen: 2026-08-28.
+[GENERATE] Top pattern: /θ/ vs /s/. Generating minimal pair exercise: "I think this is a thick path."
+[VERIFY] Pattern count ≥ 2. Exercise approved.
 [SYSTEM] Adaptive exercise delivered. Targeting confirmed recurring error.
 ```
 
