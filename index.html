@@ -334,6 +334,7 @@ let currentSentence = 0;
 let isRecording = false;
 let recognition = null;
 let finalTranscript = '';
+let lastInterim = '';
 let gotResult = false;
 let timeoutId = null;
 
@@ -401,6 +402,7 @@ if (SR) {
       if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
       else interim += event.results[i][0].transcript;
     }
+    if (interim) lastInterim = interim; // keep latest interim as fallback
     // Live preview while speaking (never overwrite a finished result)
     if (interim) {
       const el = $('transcript-result');
@@ -412,7 +414,8 @@ if (SR) {
     isRecording = false;
     clearTimeout(timeoutId);
     $('btn-record').innerHTML = '● Record';
-    const text = finalTranscript.trim();
+    // Use final transcript; fall back to the last interim (happens when user clicks Stop quickly)
+    const text = (finalTranscript.trim() || lastInterim.trim());
     if (text) {
       log('TRANSCRIBE', `Transcription: "${text}"`);
       runAgent(text);
@@ -449,7 +452,7 @@ async function toggleRecording() {
     alert('Microphone access denied. Please allow mic permissions, or use the typed fallback below.');
     return;
   }
-  finalTranscript = ''; gotResult = false;
+  finalTranscript = ''; lastInterim = ''; gotResult = false;
   delete $('transcript-result').dataset.done; // new recording = unlock preview
   isRecording = true;
   $('btn-record').innerHTML = '<span class="rec">■</span> Stop';
